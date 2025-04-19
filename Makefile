@@ -25,8 +25,12 @@ build: ## Build cli and svc binaries
 	@echo "Building svc..."
 	go build -o $(SVC_BIN) $(SVC_SRC)
 
-test: ## Run all unit tests
-	go test ./... -v
+format: ## Format the code using gofmt
+	@echo "Formatting code..."
+	gofmt -s -w .
+
+test: ## Run all unit tests with coverage
+	go test ./... -v -cover
 
 clean: ## Remove generated binaries and test cache
 	@echo "Cleaning up..."

@@ -1,0 +1,6 @@
+services:
+  nginx:
+    image: nginxdemos/hello
+    ports:
+      - "9050:80"
+    restart: unless-stopped
