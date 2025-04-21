@@ -26,7 +26,7 @@ func main() {
 		Use:   "health",
 		Short: "Check Docker daemon and container health",
 		Run: func(cmd *cobra.Command, args []string) {
-			app := cli.NewHealthApp()
+			app := cli.NewHealthApp(nil)
 			if err := app.Run(); err != nil {
 				logger.Error("Error running health check", "error", err)
 				os.Exit(1)

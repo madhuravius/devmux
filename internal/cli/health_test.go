@@ -28,7 +28,7 @@ func (m *MockDockerClient) Close() error {
 }
 
 func TestNewHealthApp(t *testing.T) {
-	app := cli.NewHealthApp()
+	app := cli.NewHealthApp(nil)
 	assert.NotNil(t, app)
 }
 
@@ -70,7 +70,7 @@ func TestModelUpdate_DockerResultMsg(t *testing.T) {
 	model := cli.NewHealthModel()
 	results := []string{"Connected to Docker", "No containers running"}
 
-	newModel, cmd := model.Update(cli.NewDockerResultMsg(results))
+	newModel, cmd := model.Update(docker.HealthCheckResult{})
 
 	healthModel := newModel.(cli.HealthModel)
 	assert.False(t, healthModel.Loading())
@@ -115,17 +115,64 @@ func TestModelView(t *testing.T) {
 			contains: []string{"❌ Error: connection error"},
 		},
 		{
-			name: "Results View",
+			name: "Empty View",
 			setup: func() cli.HealthModel {
 				m := cli.NewHealthModel()
-				results := []string{"Connected to Docker", "No containers running"}
-				newModel, _ := m.Update(cli.NewDockerResultMsg(results))
+				newModel, _ := m.Update(docker.HealthCheckResult{})
 				return newModel.(cli.HealthModel)
 			},
 			contains: []string{
 				"🐳 Docker Health Check Results",
-				"• Connected to Docker",
-				"• No containers running",
+				"No containers running"},
+		},
+		{
+			name: "Results View",
+			setup: func() cli.HealthModel {
+				m := cli.NewHealthModel()
+				mockResult := docker.HealthCheckResult{
+					Connected: true,
+					Message:   "Docker is running",
+					Containers: []docker.ContainerHealth{
+						{
+							ID:      "abc123def456",
+							Names:   "web-server",
+							Health:  "healthy",
+							Running: true,
+							Ports: []docker.Port{
+								{
+									IP:          "0.0.0.0",
+									PrivatePort: 80,
+									PublicPort:  8080,
+									Type:        "tcp",
+								},
+							},
+						},
+						{
+							ID:      "789ghijkl012",
+							Names:   "database",
+							Health:  "unhealthy",
+							Running: true,
+							Ports: []docker.Port{
+								{
+									IP:          "0.0.0.0",
+									PrivatePort: 5432,
+									PublicPort:  5432,
+									Type:        "tcp",
+								},
+							},
+						},
+					},
+				}
+				newModel, _ := m.Update(mockResult)
+				return newModel.(cli.HealthModel)
+			},
+			contains: []string{
+				"🐳 Docker Health Check Results",
+				"web-server",
+				"database",
+				"8080->80/tcp",
+				"healthy",
+				"unhealthy",
 			},
 		},
 	}
