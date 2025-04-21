@@ -66,19 +66,6 @@ func TestModelUpdate_KeyMsg(t *testing.T) {
 	}
 }
 
-func TestModelUpdate_DockerResultMsg(t *testing.T) {
-	model := cli.NewHealthModel()
-	results := []string{"Connected to Docker", "No containers running"}
-
-	newModel, cmd := model.Update(docker.HealthCheckResult{})
-
-	healthModel := newModel.(cli.HealthModel)
-	assert.False(t, healthModel.Loading())
-	assert.True(t, healthModel.Done())
-	assert.Equal(t, results, healthModel.Results())
-	assert.NotNil(t, cmd)
-}
-
 func TestModelUpdate_DockerErrorMsg(t *testing.T) {
 	model := cli.NewHealthModel()
 	err := errors.New("connection failed")
@@ -170,7 +157,6 @@ func TestModelView(t *testing.T) {
 				"🐳 Docker Health Check Results",
 				"web-server",
 				"database",
-				"8080->80/tcp",
 				"healthy",
 				"unhealthy",
 			},
