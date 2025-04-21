@@ -18,6 +18,8 @@ help: ## Show this help message
 
 deps: ## Download go module dependencies
 	go mod tidy
+	go install go.uber.org/mock/mockgen
+	go generate ./...
 
 build: ## Build cli and svc binaries
 	@echo "Building cli..."

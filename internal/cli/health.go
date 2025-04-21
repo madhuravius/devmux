@@ -12,7 +12,7 @@ import (
 )
 
 type App struct {
-	model model
+	model Model
 }
 
 func NewHealthApp() *App {
@@ -27,8 +27,8 @@ func (a *App) Run() error {
 	return err
 }
 
-// Make model public for testing
-type model struct {
+type Model struct {
+	client  docker.UnderlyingDockerClient
 	spinner spinner.Model
 	done    bool
 	loading bool
@@ -45,22 +45,22 @@ type HealthModel interface {
 	Spinner() spinner.Model
 }
 
-func (m model) Loading() bool          { return m.loading }
-func (m model) Done() bool             { return m.done }
-func (m model) Error() error           { return m.err }
-func (m model) Results() []string      { return m.results }
-func (m model) Spinner() spinner.Model { return m.spinner }
+func (m Model) Loading() bool          { return m.loading }
+func (m Model) Done() bool             { return m.done }
+func (m Model) Error() error           { return m.err }
+func (m Model) Results() []string      { return m.results }
+func (m Model) Spinner() spinner.Model { return m.spinner }
 
 func NewHealthModel() HealthModel {
 	return initialModel()
 }
 
-func initialModel() model {
+func initialModel() Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-	return model{
+	return Model{
 		spinner: s,
 		loading: true,
 		results: []string{},
@@ -83,9 +83,9 @@ func NewDockerErrorMsg(err error) tea.Msg {
 	return dockerErrorMsg{err: err}
 }
 
-func checkDockerHealth() tea.Cmd {
+func checkDockerHealth(cli docker.UnderlyingDockerClient) tea.Cmd {
 	return func() tea.Msg {
-		cli, err := docker.NewClient()
+		cli, err := docker.NewClient(cli)
 		if err != nil {
 			return dockerErrorMsg{err: fmt.Errorf("failed to create Docker client: %w", err)}
 		}
@@ -125,14 +125,14 @@ func checkDockerHealth() tea.Cmd {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
-		checkDockerHealth(),
+		checkDockerHealth(m.client),
 	)
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" || msg.String() == "q" {
@@ -156,7 +156,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m Model) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("❌ Error: %s\n", m.err.Error())
 	}

@@ -1,13 +1,23 @@
 package docker
 
+//go:generate mockgen -destination=mocks/docker_client_mock.go -package=mocks -source=./client.go UnderlyingDockerClient
+
 import (
 	"context"
 	"fmt"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
+
+type UnderlyingDockerClient interface {
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
+	Ping(ctx context.Context) (types.Ping, error)
+	Close() error
+}
 
 type DockerAPI interface {
 	CheckHealth(ctx context.Context) HealthCheckResult
@@ -15,7 +25,7 @@ type DockerAPI interface {
 }
 
 type dockerClient struct {
-	client *client.Client
+	client UnderlyingDockerClient
 }
 
 type ContainerHealth struct {
@@ -40,10 +50,13 @@ type HealthCheckResult struct {
 	Containers []ContainerHealth
 }
 
-func NewClient() (DockerAPI, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker client: %w", err)
+func NewClient(cli UnderlyingDockerClient) (DockerAPI, error) {
+	var err error
+	if cli == nil {
+		cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Docker client: %w", err)
+		}
 	}
 
 	return &dockerClient{client: cli}, nil
